@@ -188,11 +188,35 @@ def provision_ligase(protocol: paml.Protocol, plate, ligase):
     return c_ligase
 
 
-# define the function for assembly
+# define the functions for assembly
 
-def assemble_components(protocol:paml.Protocol,source_wells,build_wells) -> None:
-    protocol.primitive_step('TransferByMap', source=source_wells, destination=build_wells.output_pin('samples'), 
-    plan=sbol3.Measure(2, tyto.OM.microliter))
+def assemble_backbone(protocol:paml.Protocol,c_plasmid_backbone,goldengate_build_wells) -> None:
+    protocol.primitive_step('Transfer', source=c_plasmid_backbone, destination=goldengate_build_wells.output_pin('samples'), 
+    amount=sbol3.Measure(2, tyto.OM.microliter), dispenseVelocity=sbol3.Measure(2, tyto.OM.microliter))
+
+def assemble_promorbs(protocol:paml.Protocol,c_promorbs,goldengate_build_wells) -> None:
+    protocol.primitive_step('Transfer', source=c_promorbs, destination=goldengate_build_wells.output_pin('samples'), 
+    amount=sbol3.Measure(2, tyto.OM.microliter), dispenseVelocity=sbol3.Measure(2, tyto.OM.microliter))
+    
+def assemble_GFP(protocol:paml.Protocol,c_GFP,goldengate_build_wells) -> None:
+    protocol.primitive_step('Transfer', source=c_GFP, destination=goldengate_build_wells.output_pin('samples'), 
+    amount=sbol3.Measure(2, tyto.OM.microliter), dispenseVelocity=sbol3.Measure(2, tyto.OM.microliter))   
+
+def assemble_terminator(protocol:paml.Protocol,c_terminator,goldengate_build_wells) -> None:
+    protocol.primitive_step('Transfer', source=c_terminator, destination=goldengate_build_wells.output_pin('samples'), 
+    amount=sbol3.Measure(2, tyto.OM.microliter), dispenseVelocity=sbol3.Measure(2, tyto.OM.microliter))   
+
+def assemble_bsaI(protocol:paml.Protocol,c_bsaI,goldengate_build_wells) -> None:
+    protocol.primitive_step('Transfer', source=c_bsaI, destination=goldengate_build_wells.output_pin('samples'), 
+    amount=sbol3.Measure(2, tyto.OM.microliter), dispenseVelocity=sbol3.Measure(2, tyto.OM.microliter)) 
+
+def assemble_bufferT4(protocol:paml.Protocol,c_buffer,goldengate_build_wells) -> None:
+    protocol.primitive_step('Transfer', source=c_buffer, destination=goldengate_build_wells.output_pin('samples'), 
+    amount=sbol3.Measure(2, tyto.OM.microliter), dispenseVelocity=sbol3.Measure(2, tyto.OM.microliter)) 
+
+def assemble_ligase(protocol:paml.Protocol,c_ligase,goldengate_build_wells) -> None:
+    protocol.primitive_step('Transfer', source=c_ligase, destination=goldengate_build_wells.output_pin('samples'), 
+    amount=sbol3.Measure(2, tyto.OM.microliter), dispenseVelocity=sbol3.Measure(2, tyto.OM.microliter)) 
 
 #############################################
  # set up the document
@@ -254,7 +278,7 @@ def golden_gate_protocol() -> Tuple[paml.Protocol, Document]:
     provision_ligase(protocol, plate, ligase)
 
 
-     # list the materials for transfer function]
+    # list the materials for transfer function
 
     c_plasmid_backbone = provision_MC016(protocol, plate, plasmid_backbone) 
     c_promorbs = provision_MC043(protocol, plate, promorbs)
@@ -264,33 +288,29 @@ def golden_gate_protocol() -> Tuple[paml.Protocol, Document]:
     c_buffer = provision_bufferT4(protocol, plate, buffer)
     c_ligase = provision_ligase(protocol, plate, ligase)
 
-    source_wells: list=[c_plasmid_backbone,c_promorbs,c_GFP,c_terminator,c_bsaI,c_buffer,c_ligase]
-
-
+  
 # define the wells where you will be doing the GG assembly  
     goldengate_build_wells = protocol.primitive_step('PlateCoordinates', source=plate.output_pin('samples'), coordinates='G1:G2')
 
-    dna_source_wells = protocol.input_value('source_wells','http://bioprotocols.org/paml#SampleCollection')
-
-    dna_build_layout = protocol.input_value('goldengate_build_wells','http://bioprotocols.org/paml#SampleData') 
-
-    build_wells = protocol.primitive_step('DuplicateCollection', source=dna_build_layout) 
-
-
+    
 # assemble DNA in build wells
 
-    assemble_components(protocol,dna_source_wells,build_wells)  
+    assemble_backbone(protocol, c_plasmid_backbone, goldengate_build_wells)
+    assemble_promorbs(protocol, c_promorbs, goldengate_build_wells)
+    assemble_GFP(protocol, c_GFP, goldengate_build_wells)
+    assemble_terminator(protocol, c_terminator, goldengate_build_wells)
+    assemble_bsaI(protocol, c_bsaI, goldengate_build_wells)
+    assemble_bufferT4(protocol, c_buffer, goldengate_build_wells)
+    assemble_ligase(protocol, c_ligase, goldengate_build_wells)
 
 
 # Finish liquid handling protocol
-
 
     output = protocol.designate_output('constructs', 'http://bioprotocols.org/paml#SampleCollection',
     goldengate_build_wells.output_pin('samples'))
     protocol.order(protocol.get_last_step(), output)
     
     return protocol, doc  # don't return until all else is complete
-
 
 ########################################
 # Validate and write the document
